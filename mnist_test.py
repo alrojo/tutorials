@@ -45,19 +45,25 @@ def load_dataset():
         #############
         # @@@@@ Making the scaled version for Zooming-SPN @@@@@
         #############
+        print("Making mnist grid and scaling ...")
         data_orig = np.random.randint(
             low=0, high=255,
             size=(data.shape[0], data.shape[1], data.shape[2]*2, data.shape[3]*2))
+        data_rescaled = np.zeros((data.shape[0], data.shape[1], data.shape[2], data.shape[3]), dtype='float32')
         np.random.seed(seed=42)
         spacing_1_a = np.random.randint(low=0, high=28, size=data.shape[0])
         spacing_1_b = spacing_1_a + data.shape[2]
-        np.random.seed(seed=23)
+        np.random.seed(seed=24)
         spacing_2_a = np.random.randint(low=0, high=28, size=data.shape[0])
         spacing_2_b = spacing_2_a + data.shape[3]
         for i in range(data.shape[0]):
             data_orig[i, :, spacing_1_a[i]:spacing_1_b[i], spacing_2_a[i]:spacing_2_b[i]] = data[i, :, :, :]
+            data_rescaled[i,0,:,:] = transform.rescale(data_orig[i,0,:,:], 0.5)
+            
         data_orig = data_orig.astype('float32') / np.float32(256)
-        data_rescaled = transform.rescale(data, 0.5)
+        print("shapes of data_orig and data_rescaled")        
+        print(data_orig.shape)
+        print(data_rescaled.shape)
         # The inputs come as bytes, we convert them to float32 in range [0,1].
         # (Actually to range [0, 255/256], for compatibility to the version
         # provided at http://deeplearning.net/data/mnist/mnist.pkl.gz.)
