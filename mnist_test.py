@@ -57,8 +57,8 @@ def load_dataset():
         np.random.seed(seed=24)
         spacing_2_a = np.random.randint(low=0, high=28, size=data.shape[0])
         spacing_2_b = spacing_2_a + data.shape[3]
-	data_orig = data_orig.astype('float32') / np.float32(256)
-	data = data.astype('float32') / np.float32(256)
+        data_orig = data_orig.astype('float32') / np.float32(256)
+        data = data.astype('float32') / np.float32(256)
         for i in range(data.shape[0]):
             data_orig[i, :, spacing_1_a[i]:spacing_1_b[i], spacing_2_a[i]:spacing_2_b[i]] = data[i, :, :, :]
             data_rescaled[i,0,:,:] = transform.resize(data_orig[i,0,:,:], (data.shape[2],data.shape[3]))
@@ -67,8 +67,8 @@ def load_dataset():
         print(data_orig.shape)
         print(data_rescaled.shape)
         print("saving images ...")
-        plt.imsave(fname="orig", arr=data_orig[100,0,:,:])
-        plt.imsave(fname="rescaled", arr=data_rescaled[100,0,:,:])
+        plt.imsave(fname="orig", arr=data_orig[100,0,:,:], cmap=plt.cm.gray)
+        plt.imsave(fname="rescaled", arr=data_rescaled[100,0,:,:], cmap=plt.cm.gray)
         print("images saved!")
         # The inputs come as bytes, we convert them to float32 in range [0,1].
         # (Actually to range [0, 255/256], for compatibility to the version
@@ -180,15 +180,23 @@ def build_cnn(input_var=None):
     # and a fully-connected hidden layer in front of the output layer.
 
     # Input layer, as usual:
-    network = lasagne.layers.InputLayer(shape=(None, 1, 28*2, 28*2),
+    l_in = lasagne.layers.InputLayer(shape=(None, 1, 28*2, 28*2),
                                         input_var=input_var)
-    # This time we do not apply input dropout, as it tends to work less well
-    # for convolutional layers.
-
+    l_conv_1_a = lasagne.layers.Conv2DLayer(l_in, num_filters=16, filter_size=(3, 3))
+    l_conv_1_b = lasagne.layers.Conv2DLayer(l_conv_1_a, num_filters=8, filter_size=(3, 3))
+    l_mp_1 = lasagne.layers.MacPool2DLayer(l_conv_1_b, pool_size=(2, 2))
+    l_dense_1 = lasagne.layers.DenseLayer(lasagne.layers.dropout(l_mp_1, p=.5), num_units=128)
+    b = np.zeros((2,3), dtype='float32')
+    b[0, 0] = 1
+    b[1, 1] = 1
+    b = b.flatten()
+    W = lasagne.init.Constant(0.0)
+    l_dense_spn_in = lasagne.layers.DenseLayer(l_dense_1, num_units=6, W=W, b=b)
+    l_spn = lasagne.layers.TransformerLayer(l_in, l_dense_spn_in)
     # Convolutional layer with 32 kernels of size 5x5. Strided and padded
     # convolutions are supported as well; see the docstring.
     network = lasagne.layers.Conv2DLayer(
-            network, num_filters=32, filter_size=(5, 5),
+            l_spn, num_filters=32, filter_size=(5, 5),
             nonlinearity=lasagne.nonlinearities.rectify,
             W=lasagne.init.GlorotUniform())
     # Expert note: Lasagne provides alternative convolutional layers that
