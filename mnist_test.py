@@ -175,14 +175,17 @@ def build_custom_mlp(input_var=None, depth=2, width=800, drop_input=.2,
     return network
 
 
-def build_cnn(input_var=None):
+def build_cnn(input_var_orig=None, input_var_rescaled=None):
     # As a third model, we'll create a CNN of two convolution + pooling stages
     # and a fully-connected hidden layer in front of the output layer.
 
-    # Input layer, as usual:
-    l_in = lasagne.layers.InputLayer(shape=(None, 1, 28*2, 28*2),
-                                        input_var=input_var)
-    l_conv_1_a = lasagne.layers.Conv2DLayer(l_in, num_filters=16, filter_size=(3, 3))
+    l_in_orig = lasagne.layers.InputLayer(shape=(None, 1, 28*2, 28*2),
+                                        input_var=input_var_rescaled)
+
+    l_in_rescaled = lasagne.layers.InputLayer(shape=(None, 1, 28, 28),
+                                        input_var=input_var_orig)
+
+    l_conv_1_a = lasagne.layers.Conv2DLayer(l_in_rescaled, num_filters=16, filter_size=(3, 3))
     l_conv_1_b = lasagne.layers.Conv2DLayer(l_conv_1_a, num_filters=8, filter_size=(3, 3))
     l_mp_1 = lasagne.layers.MaxPool2DLayer(l_conv_1_b, pool_size=(2, 2))
     l_dense_1 = lasagne.layers.DenseLayer(lasagne.layers.dropout(l_mp_1, p=.5), num_units=128)
@@ -192,7 +195,7 @@ def build_cnn(input_var=None):
     b = b.flatten()
     W = lasagne.init.Constant(0.0)
     l_dense_spn_in = lasagne.layers.DenseLayer(l_dense_1, num_units=6, W=W, b=b)
-    l_spn = lasagne.layers.TransformerLayer(l_in, l_dense_spn_in, downsample_factor=2)
+    l_spn = lasagne.layers.TransformerLayer(l_in_orig, l_dense_spn_in, downsample_factor=2)
     # Convolutional layer with 32 kernels of size 5x5. Strided and padded
     # convolutions are supported as well; see the docstring.
     network = lasagne.layers.Conv2DLayer(
@@ -236,17 +239,18 @@ def build_cnn(input_var=None):
 # them to GPU at once for slightly improved performance. This would involve
 # several changes in the main program, though, and is not demonstrated here.
 
-def iterate_minibatches(inputs, targets, batchsize, shuffle=False):
-    assert len(inputs) == len(targets)
+def iterate_minibatches(inputs_orig, inputs_rescaled, targets, batchsize, shuffle=False):
+    assert len(inputs_orig) == len(targets)
+    assert len(inputs_rescaled) == len(targets)
     if shuffle:
-        indices = np.arange(len(inputs))
+        indices = np.arange(len(inputs_orig))
         np.random.shuffle(indices)
-    for start_idx in range(0, len(inputs) - batchsize + 1, batchsize):
+    for start_idx in range(0, len(inputs_orig) - batchsize + 1, batchsize):
         if shuffle:
             excerpt = indices[start_idx:start_idx + batchsize]
         else:
             excerpt = slice(start_idx, start_idx + batchsize)
-        yield inputs[excerpt], targets[excerpt]
+        yield inputs_orig[excerpt], inputs_rescaled[excerpt], targets[excerpt]
 
 
 # ############################## Main program ################################
@@ -260,19 +264,20 @@ def main(model='cnn', num_epochs=500):
     X_train_orig, X_train_rescaled, y_train, X_val_orig, X_val_rescaled, y_val, X_test_orig, X_test_rescaled, y_test = load_dataset()
 
     # Prepare Theano variables for inputs and targets
-    input_var = T.tensor4('inputs')
+    input_var_orig = T.tensor4('inputs')
+    input_var_rescaled = T.tensor4('inputs')
     target_var = T.ivector('targets')
 
     # Create neural network model (depending on first command line parameter)
     print("Building model and compiling functions...")
     if model == 'mlp':
-        network = build_mlp(input_var)
+        network = build_mlp(input_var_rescaled)
     elif model.startswith('custom_mlp:'):
         depth, width, drop_in, drop_hid = model.split(':', 1)[1].split(',')
-        network = build_custom_mlp(input_var, int(depth), int(width),
+        network = build_custom_mlp(input_var_rescaled, int(depth), int(width),
                                    float(drop_in), float(drop_hid))
     elif model == 'cnn':
-        network = build_cnn(input_var)
+        network = build_cnn(input_var_orig, input_var_rescaled)
     else:
         print("Unrecognized model type %r." % model)
         return
@@ -304,10 +309,10 @@ def main(model='cnn', num_epochs=500):
 
     # Compile a function performing a training step on a mini-batch (by giving
     # the updates dictionary) and returning the corresponding training loss:
-    train_fn = theano.function([input_var, target_var], loss, updates=updates)
+    train_fn = theano.function([input_var_orig, input_var_rescaled, target_var], loss, updates=updates)
 
     # Compile a second function computing the validation loss and accuracy:
-    val_fn = theano.function([input_var, target_var], [test_loss, test_acc])
+    val_fn = theano.function([input_var_orig, input_var_rescaled, target_var], [test_loss, test_acc])
 
     # Finally, launch the training loop.
     print("Starting training...")
@@ -317,7 +322,7 @@ def main(model='cnn', num_epochs=500):
         train_err = 0
         train_batches = 0
         start_time = time.time()
-        for batch in iterate_minibatches(X_train_orig, y_train, 500, shuffle=True):
+        for batch in iterate_minibatches(X_train_orig, X_train_rescaled, y_train, 500, shuffle=True):
             inputs, targets = batch
             train_err += train_fn(inputs, targets)
             train_batches += 1
@@ -326,7 +331,7 @@ def main(model='cnn', num_epochs=500):
         val_err = 0
         val_acc = 0
         val_batches = 0
-        for batch in iterate_minibatches(X_val_orig, y_val, 500, shuffle=False):
+        for batch in iterate_minibatches(X_val_orig, X_val_rescaled, y_val, 500, shuffle=False):
             inputs, targets = batch
             err, acc = val_fn(inputs, targets)
             val_err += err
@@ -345,7 +350,7 @@ def main(model='cnn', num_epochs=500):
     test_err = 0
     test_acc = 0
     test_batches = 0
-    for batch in iterate_minibatches(X_test_orig, y_test, 500, shuffle=False):
+    for batch in iterate_minibatches(X_test_orig, X_test_rescaled, y_test, 500, shuffle=False):
         inputs, targets = batch
         err, acc = val_fn(inputs, targets)
         test_err += err
