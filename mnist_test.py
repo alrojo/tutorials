@@ -180,16 +180,25 @@ def build_cnn(input_var_orig=None, input_var_rescaled=None):
     # and a fully-connected hidden layer in front of the output layer.
 
     l_in_orig = lasagne.layers.InputLayer(shape=(None, 1, 28*2, 28*2),
-                                        input_var=input_var_rescaled)
+                                        input_var=input_var_orig)
 
     l_in_rescaled = lasagne.layers.InputLayer(shape=(None, 1, 28, 28),
-                                        input_var=input_var_orig)
+                                        input_var=input_var_rescaled)
     l_hid1 = lasagne.layers.DenseLayer(
             l_in_rescaled, num_units=800)
+    b = np.zeros((2,3), dtype='float32')
+    b[0, 0] = 1
+    b[1, 1] = 1
+    b = b.flatten()
+    W = lasagne.init.Constant(0.0)
+    
     l_hid2 = lasagne.layers.DenseLayer(
-            lasagne.layers.dropout(l_hid1, p=.5), num_units=800)
+            l_hid1, num_units=6, W=W, b=b)
+    l_spn = lasagne.layers.TransformerLayer(l_in_orig, l_hid2, downsample_factor=2)
+    l_hid3 = lasagne.layers.DenseLayer(
+	    l_spn, num_units=800)
     l_out = lasagne.layers.DenseLayer(
-            l_hid2, num_units=10,
+            l_hid3, num_units=10,
             nonlinearity=lasagne.nonlinearities.softmax)
     #b = np.zeros((2,3), dtype='float32')
     #b[0, 0] = 1
