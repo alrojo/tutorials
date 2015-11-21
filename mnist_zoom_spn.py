@@ -110,10 +110,14 @@ def build_spn_cnn(input_var_orig=None, input_var_rescaled=None, zoom=True):
     W = lasagne.init.Constant(0.0)
     l_dense_spn_out = lasagne.layers.DenseLayer(
             l_dense_spn_1, num_units=6, W=W, b=b)
+<<<<<<< HEAD
     if zoom:
         l_spn_1 = lasagne.layers.TransformerLayer(l_in_orig, l_dense_spn_out, downsample_factor=2)
     else:
         l_spn_1 = lasagne.layers.TransformerLayer(l_in_rescaled, l_dense_spn_out, downsample_factor=2)
+=======
+    l_spn_1 = lasagne.layers.TransformerLayer(l_in_orig, l_dense_spn_out, downsample_factor=2)
+>>>>>>> 3b09048867978aa86f0ed5e625531d415e01604d
     l_conv_1_a = lasagne.layers.Conv2DLayer(
             l_spn_1, num_filters=16, filter_size=(3, 3))
     l_conv_1_b = lasagne.layers.Conv2DLayer(
