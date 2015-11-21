@@ -10,6 +10,7 @@ import numpy as np
 import theano
 import theano.tensor as T
 from skimage import transform
+import matplotlib.pyplot as plt
 
 import lasagne
 
@@ -64,6 +65,10 @@ def load_dataset():
         print("shapes of data_orig and data_rescaled")        
         print(data_orig.shape)
         print(data_rescaled.shape)
+        print("saving images ...")
+        plt.imsave(fname="orig", arr=data_orig[100,0,:,:])
+        plt.imsave(fname="rescaled", arr=data_rescaled[100,0,:,:])
+        print("images saved!")
         # The inputs come as bytes, we convert them to float32 in range [0,1].
         # (Actually to range [0, 255/256], for compatibility to the version
         # provided at http://deeplearning.net/data/mnist/mnist.pkl.gz.)
