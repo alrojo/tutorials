@@ -184,7 +184,7 @@ def build_cnn(input_var=None):
                                         input_var=input_var)
     l_conv_1_a = lasagne.layers.Conv2DLayer(l_in, num_filters=16, filter_size=(3, 3))
     l_conv_1_b = lasagne.layers.Conv2DLayer(l_conv_1_a, num_filters=8, filter_size=(3, 3))
-    l_mp_1 = lasagne.layers.MacPool2DLayer(l_conv_1_b, pool_size=(2, 2))
+    l_mp_1 = lasagne.layers.MaxPool2DLayer(l_conv_1_b, pool_size=(2, 2))
     l_dense_1 = lasagne.layers.DenseLayer(lasagne.layers.dropout(l_mp_1, p=.5), num_units=128)
     b = np.zeros((2,3), dtype='float32')
     b[0, 0] = 1
@@ -192,7 +192,7 @@ def build_cnn(input_var=None):
     b = b.flatten()
     W = lasagne.init.Constant(0.0)
     l_dense_spn_in = lasagne.layers.DenseLayer(l_dense_1, num_units=6, W=W, b=b)
-    l_spn = lasagne.layers.TransformerLayer(l_in, l_dense_spn_in)
+    l_spn = lasagne.layers.TransformerLayer(l_in, l_dense_spn_in, downsample_factor=2)
     # Convolutional layer with 32 kernels of size 5x5. Strided and padded
     # convolutions are supported as well; see the docstring.
     network = lasagne.layers.Conv2DLayer(
