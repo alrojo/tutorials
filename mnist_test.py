@@ -48,7 +48,7 @@ def load_dataset():
         print("Making mnist grid and scaling ...")
         data_orig = np.random.randint(
             low=0, high=255,
-            size=(data.shape[0], data.shape[1], data.shape[2]*2, data.shape[3]*2))
+            size=(data.shape[0], data.shape[1], data.shape[2]*2, data.shape[3]*2)).astype('float32')
         data_rescaled = np.zeros((data.shape[0], data.shape[1], data.shape[2], data.shape[3]), dtype='float32')
         np.random.seed(seed=42)
         spacing_1_a = np.random.randint(low=0, high=28, size=data.shape[0])
@@ -56,11 +56,12 @@ def load_dataset():
         np.random.seed(seed=24)
         spacing_2_a = np.random.randint(low=0, high=28, size=data.shape[0])
         spacing_2_b = spacing_2_a + data.shape[3]
+	data_orig = data_orig.astype('float32') / np.float32(256)
+	data = data.astype('float32') / np.float32(256)
         for i in range(data.shape[0]):
             data_orig[i, :, spacing_1_a[i]:spacing_1_b[i], spacing_2_a[i]:spacing_2_b[i]] = data[i, :, :, :]
-            data_rescaled[i,0,:,:] = transform.rescale(data_orig[i,0,:,:], 0.5)
-            
-        data_orig = data_orig.astype('float32') / np.float32(256)
+            data_rescaled[i,0,:,:] = transform.resize(data_orig[i,0,:,:], (data.shape[2],data.shape[3]))
+
         print("shapes of data_orig and data_rescaled")        
         print(data_orig.shape)
         print(data_rescaled.shape)
