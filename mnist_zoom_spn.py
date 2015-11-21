@@ -294,10 +294,9 @@ if __name__ == '__main__':
         print("Trains a neural network on MNIST using Lasagne.")
         print("Usage: %s [MODEL [EPOCHS]]" % sys.argv[0])
         print()
-        print("MODEL: 'spn_cnn' for a small spn_cnn")
-        print("       'spn_large' for a large spn_cnn")
-        print("       'cnn' for a simple Convolutional Neural Network (CNN).")
-        print("ZOOM:  '1' for a zoom_spn_cnn or '0' for std. spn_cnn")
+        print("MODEL: 'spn_cnn' for a small spn_cnn (default: spn_cnn)")
+        print("       'spn_cnn_large' for a large spn_cnn")
+        print("ZOOM:  '1' for a zoom_spn_cnn or '0' for std. spn_cnn (default: 1)")
         print("EPOCHS: number of training epochs to perform (default: 500)")
     else:
         kwargs = {}
