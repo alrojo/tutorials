@@ -185,10 +185,8 @@ def build_cnn(input_var_orig=None, input_var_rescaled=None):
     l_in_rescaled = lasagne.layers.InputLayer(shape=(None, 1, 28, 28),
                                         input_var=input_var_orig)
 
-    l_conv_1_a = lasagne.layers.Conv2DLayer(l_in_rescaled, num_filters=16, filter_size=(3, 3))
-    l_conv_1_b = lasagne.layers.Conv2DLayer(l_conv_1_a, num_filters=8, filter_size=(3, 3))
-    l_mp_1 = lasagne.layers.MaxPool2DLayer(l_conv_1_b, pool_size=(2, 2))
-    l_dense_1 = lasagne.layers.DenseLayer(lasagne.layers.dropout(l_mp_1, p=.5), num_units=128)
+    l_mp_1 = lasagne.layers.MaxPool2DLayer(l_in_rescaled, pool_size=(2, 2))
+    l_dense_1 = lasagne.layers.DenseLayer(lasagne.layers.dropout(l_mp_1, p=.5), num_units=64)
     b = np.zeros((2,3), dtype='float32')
     b[0, 0] = 1
     b[1, 1] = 1
@@ -198,27 +196,11 @@ def build_cnn(input_var_orig=None, input_var_rescaled=None):
     l_spn = lasagne.layers.TransformerLayer(l_in_rescaled, l_dense_spn_in, downsample_factor=2)
     # Convolutional layer with 32 kernels of size 5x5. Strided and padded
     # convolutions are supported as well; see the docstring.
-    network = lasagne.layers.Conv2DLayer(
-            l_spn, num_filters=32, filter_size=(3, 3),
-            nonlinearity=lasagne.nonlinearities.rectify,
-            W=lasagne.init.GlorotUniform())
-    # Expert note: Lasagne provides alternative convolutional layers that
-    # override Theano's choice of which implementation to use; for details
-    # please see http://lasagne.readthedocs.org/en/latest/user/tutorial.html.
-
-    # Max-pooling layer of factor 2 in both dimensions:
-    network = lasagne.layers.MaxPool2DLayer(network, pool_size=(2, 2))
-
-    # Another convolution with 32 5x5 kernels, and another 2x2 pooling:
-    network = lasagne.layers.Conv2DLayer(
-            network, num_filters=32, filter_size=(3, 3),
-            nonlinearity=lasagne.nonlinearities.rectify)
-    network = lasagne.layers.MaxPool2DLayer(network, pool_size=(2, 2))
 
     # A fully-connected layer of 256 units with 50% dropout on its inputs:
     network = lasagne.layers.DenseLayer(
-            lasagne.layers.dropout(network, p=.5),
-            num_units=256,
+            lasagne.layers.dropout(l_spn, p=.5),
+            num_units=128,
             nonlinearity=lasagne.nonlinearities.rectify)
 
     # And, finally, the 10-unit output layer with 50% dropout on its inputs:
