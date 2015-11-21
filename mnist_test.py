@@ -184,32 +184,24 @@ def build_cnn(input_var_orig=None, input_var_rescaled=None):
 
     l_in_rescaled = lasagne.layers.InputLayer(shape=(None, 1, 28, 28),
                                         input_var=input_var_orig)
-
-    l_mp_1 = lasagne.layers.MaxPool2DLayer(l_in_rescaled, pool_size=(2, 2))
-    l_dense_1 = lasagne.layers.DenseLayer(lasagne.layers.dropout(l_mp_1, p=.5), num_units=64)
-    b = np.zeros((2,3), dtype='float32')
-    b[0, 0] = 1
-    b[1, 1] = 1
-    b = b.flatten()
-    W = lasagne.init.Constant(0.0)
-    l_dense_spn_in = lasagne.layers.DenseLayer(l_dense_1, num_units=6, W=W, b=b)
-    l_spn = lasagne.layers.TransformerLayer(l_in_rescaled, l_dense_spn_in, downsample_factor=2)
+    l_hid1 = lasagne.layers.DenseLayer(
+            l_in_rescaled, num_units=800)
+    l_hid2 = lasagne.layers.DenseLayer(
+            lasagne.layers.dropout(l_hid1, p=.5), num_units=800)
+    l_out = lasagne.layers.DenseLayer(
+            l_hid2, num_units=10,
+            nonlinearity=lasagne.nonlinearities.softmax)
+    #b = np.zeros((2,3), dtype='float32')
+    #b[0, 0] = 1
+    #b[1, 1] = 1
+    #b = b.flatten()
+    #W = lasagne.init.Constant(0.0)
+    #l_dense_spn_in = lasagne.layers.DenseLayer(l_dense_1, num_units=6, W=W, b=b)
+    #l_spn = lasagne.layers.TransformerLayer(l_in_rescaled, l_dense_spn_in, downsample_factor=2)
     # Convolutional layer with 32 kernels of size 5x5. Strided and padded
     # convolutions are supported as well; see the docstring.
 
-    # A fully-connected layer of 256 units with 50% dropout on its inputs:
-    network = lasagne.layers.DenseLayer(
-            lasagne.layers.dropout(l_spn, p=.5),
-            num_units=128,
-            nonlinearity=lasagne.nonlinearities.rectify)
-
-    # And, finally, the 10-unit output layer with 50% dropout on its inputs:
-    network = lasagne.layers.DenseLayer(
-            lasagne.layers.dropout(network, p=.5),
-            num_units=10,
-            nonlinearity=lasagne.nonlinearities.softmax)
-
-    return network
+    return l_out
 
 
 # ############################# Batch iterator ###############################
