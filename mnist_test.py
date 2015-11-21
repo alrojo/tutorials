@@ -195,11 +195,11 @@ def build_cnn(input_var_orig=None, input_var_rescaled=None):
     b = b.flatten()
     W = lasagne.init.Constant(0.0)
     l_dense_spn_in = lasagne.layers.DenseLayer(l_dense_1, num_units=6, W=W, b=b)
-    l_spn = lasagne.layers.TransformerLayer(l_in_orig, l_dense_spn_in, downsample_factor=2)
+    l_spn = lasagne.layers.TransformerLayer(l_in_rescaled, l_dense_spn_in, downsample_factor=2)
     # Convolutional layer with 32 kernels of size 5x5. Strided and padded
     # convolutions are supported as well; see the docstring.
     network = lasagne.layers.Conv2DLayer(
-            l_spn, num_filters=32, filter_size=(5, 5),
+            l_spn, num_filters=32, filter_size=(3, 3),
             nonlinearity=lasagne.nonlinearities.rectify,
             W=lasagne.init.GlorotUniform())
     # Expert note: Lasagne provides alternative convolutional layers that
@@ -211,7 +211,7 @@ def build_cnn(input_var_orig=None, input_var_rescaled=None):
 
     # Another convolution with 32 5x5 kernels, and another 2x2 pooling:
     network = lasagne.layers.Conv2DLayer(
-            network, num_filters=32, filter_size=(5, 5),
+            network, num_filters=32, filter_size=(3, 3),
             nonlinearity=lasagne.nonlinearities.rectify)
     network = lasagne.layers.MaxPool2DLayer(network, pool_size=(2, 2))
 
@@ -309,10 +309,10 @@ def main(model='cnn', num_epochs=500):
 
     # Compile a function performing a training step on a mini-batch (by giving
     # the updates dictionary) and returning the corresponding training loss:
-    train_fn = theano.function([input_var_orig, input_var_rescaled, target_var], loss, updates=updates)
+    train_fn = theano.function([input_var_orig, input_var_rescaled, target_var], loss, updates=updates, on_unused_input='ignore')
 
     # Compile a second function computing the validation loss and accuracy:
-    val_fn = theano.function([input_var_orig, input_var_rescaled, target_var], [test_loss, test_acc])
+    val_fn = theano.function([input_var_orig, input_var_rescaled, target_var], [test_loss, test_acc], on_unused_input='ignore')
 
     # Finally, launch the training loop.
     print("Starting training...")
