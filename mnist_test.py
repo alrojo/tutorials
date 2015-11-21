@@ -49,10 +49,10 @@ def load_dataset():
             low=0, high=255,
             size=(data.shape[0], data.shape[1], data.shape[2]*2, data.shape[3]*2))
         np.random.seed(seed=42)
-        spacing_1_a = np.random.randint(low=0, high=28, shape=data.shape[0])
+        spacing_1_a = np.random.randint(low=0, high=28, size=data.shape[0])
         spacing_1_b = spacing_1_a + data.shape[2]
         np.random.seed(seed=23)
-        spacing_2_a = np.random.randint(low=0, high=28, shape=data.shape[0])
+        spacing_2_a = np.random.randint(low=0, high=28, size=data.shape[0])
         spacing_2_b = spacing_2_a + data.shape[3]
         for i in range(data[0]):
             data_orig[i, :, spacing_1_a:spacing_1_b, spacing_2_a:spacing_2_b] = data[i, :, :, :]
