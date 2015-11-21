@@ -288,15 +288,6 @@ def main(model='spn_cnn', zoom=True, num_epochs=500):
     print("  test accuracy:\t\t{:.2f} %".format(
         test_acc / test_batches * 100))
 
-    # Optionally, you could now dump the network weights to a file like this:
-    # np.savez('model.npz', *lasagne.layers.get_all_param_values(network))
-    #
-    # And load them again later on like this:
-    # with np.load('model.npz') as f:
-    #     param_values = [f['arr_%d' % i] for i in range(len(f.files))]
-    # lasagne.layers.set_all_param_values(network, param_values)
-
-
 if __name__ == '__main__':
     if ('--help' in sys.argv) or ('-h' in sys.argv):
         print("Trains a neural network on MNIST using Lasagne.")
