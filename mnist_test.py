@@ -264,8 +264,8 @@ def main(model='cnn', num_epochs=500):
     X_train_orig, X_train_rescaled, y_train, X_val_orig, X_val_rescaled, y_val, X_test_orig, X_test_rescaled, y_test = load_dataset()
 
     # Prepare Theano variables for inputs and targets
-    input_var_orig = T.tensor4('inputs')
-    input_var_rescaled = T.tensor4('inputs')
+    input_var_orig = T.tensor4('inputs_orig')
+    input_var_rescaled = T.tensor4('inputs_rescaled')
     target_var = T.ivector('targets')
 
     # Create neural network model (depending on first command line parameter)
@@ -323,8 +323,8 @@ def main(model='cnn', num_epochs=500):
         train_batches = 0
         start_time = time.time()
         for batch in iterate_minibatches(X_train_orig, X_train_rescaled, y_train, 500, shuffle=True):
-            inputs, targets = batch
-            train_err += train_fn(inputs, targets)
+            inputs_orig, inputs_rescaled, targets = batch
+            train_err += train_fn(inputs_orig, inputs_rescaled, targets)
             train_batches += 1
 
         # And a full pass over the validation data:
@@ -332,8 +332,8 @@ def main(model='cnn', num_epochs=500):
         val_acc = 0
         val_batches = 0
         for batch in iterate_minibatches(X_val_orig, X_val_rescaled, y_val, 500, shuffle=False):
-            inputs, targets = batch
-            err, acc = val_fn(inputs, targets)
+            inputs_orig, inputs_rescaled, targets = batch
+            err, acc = val_fn(inputs_orig, inputs_rescaled, targets)
             val_err += err
             val_acc += acc
             val_batches += 1
@@ -351,8 +351,8 @@ def main(model='cnn', num_epochs=500):
     test_acc = 0
     test_batches = 0
     for batch in iterate_minibatches(X_test_orig, X_test_rescaled, y_test, 500, shuffle=False):
-        inputs, targets = batch
-        err, acc = val_fn(inputs, targets)
+        inputs_orig, inputs_rescaled, targets = batch
+        err, acc = val_fn(inputs_orig, inputs_rescaled, targets)
         test_err += err
         test_acc += acc
         test_batches += 1
