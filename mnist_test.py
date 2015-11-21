@@ -105,111 +105,41 @@ def load_dataset():
 # function that takes a Theano variable representing the input and returns
 # the output layer of a neural network model built in Lasagne.
 
-def build_mlp(input_var=None):
-    # This creates an MLP of two hidden layers of 800 units each, followed by
-    # a softmax output layer of 10 units. It applies 20% dropout to the input
-    # data and 50% dropout to the hidden layers.
 
-    # Input layer, specifying the expected input shape of the network
-    # (unspecified batchsize, 1 channel, 28 rows and 28 columns) and
-    # linking it to the given Theano variable `input_var`, if any:
-    l_in = lasagne.layers.InputLayer(shape=(None, 1, 28, 28),
-                                     input_var=input_var)
-
-    # Apply 20% dropout to the input data:
-    l_in_drop = lasagne.layers.DropoutLayer(l_in, p=0.2)
-
-    # Add a fully-connected layer of 800 units, using the linear rectifier, and
-    # initializing weights with Glorot's scheme (which is the default anyway):
-    l_hid1 = lasagne.layers.DenseLayer(
-            l_in_drop, num_units=800,
-            nonlinearity=lasagne.nonlinearities.rectify,
-            W=lasagne.init.GlorotUniform())
-
-    # We'll now add dropout of 50%:
-    l_hid1_drop = lasagne.layers.DropoutLayer(l_hid1, p=0.5)
-
-    # Another 800-unit layer:
-    l_hid2 = lasagne.layers.DenseLayer(
-            l_hid1_drop, num_units=800,
-            nonlinearity=lasagne.nonlinearities.rectify)
-
-    # 50% dropout again:
-    l_hid2_drop = lasagne.layers.DropoutLayer(l_hid2, p=0.5)
-
-    # Finally, we'll add the fully-connected output layer, of 10 softmax units:
-    l_out = lasagne.layers.DenseLayer(
-            l_hid2_drop, num_units=10,
-            nonlinearity=lasagne.nonlinearities.softmax)
-
-    # Each layer is linked to its incoming layer(s), so we only need to pass
-    # the output layer to give access to a network in Lasagne:
-    return l_out
-
-
-def build_custom_mlp(input_var=None, depth=2, width=800, drop_input=.2,
-                     drop_hidden=.5):
-    # By default, this creates the same network as `build_mlp`, but it can be
-    # customized with respect to the number and size of hidden layers. This
-    # mostly showcases how creating a network in Python code can be a lot more
-    # flexible than a configuration file. Note that to make the code easier,
-    # all the layers are just called `network` -- there is no need to give them
-    # different names if all we return is the last one we created anyway; we
-    # just used different names above for clarity.
-
-    # Input layer and dropout (with shortcut `dropout` for `DropoutLayer`):
-    network = lasagne.layers.InputLayer(shape=(None, 1, 28, 28),
-                                        input_var=input_var)
-    if drop_input:
-        network = lasagne.layers.dropout(network, p=drop_input)
-    # Hidden layers and dropout:
-    nonlin = lasagne.nonlinearities.rectify
-    for _ in range(depth):
-        network = lasagne.layers.DenseLayer(
-                network, width, nonlinearity=nonlin)
-        if drop_hidden:
-            network = lasagne.layers.dropout(network, p=drop_hidden)
-    # Output layer:
-    softmax = lasagne.nonlinearities.softmax
-    network = lasagne.layers.DenseLayer(network, 10, nonlinearity=softmax)
-    return network
-
-
-def build_cnn(input_var_orig=None, input_var_rescaled=None):
-    # As a third model, we'll create a CNN of two convolution + pooling stages
-    # and a fully-connected hidden layer in front of the output layer.
-
+def build_zoom_spn(input_var_orig=None, input_var_rescaled=None):
+    # Input images
     l_in_orig = lasagne.layers.InputLayer(shape=(None, 1, 28*2, 28*2),
                                         input_var=input_var_orig)
 
     l_in_rescaled = lasagne.layers.InputLayer(shape=(None, 1, 28, 28),
                                         input_var=input_var_rescaled)
-    l_hid1 = lasagne.layers.DenseLayer(
-            l_in_rescaled, num_units=800)
+    # conv for the SPN
+    l_conv_spn_1_a = lasagne.layers.Conv2DLayer(
+            l_in_rescaled, num_filters=16, filter_size=(3, 3))
+    l_conv_spn_1_b = lasagne.layers.Conv2DLayer(
+            l_conv_spn_1_a, num_filters=32, filter_size=(3, 3))
+    l_mp_spn_1 = lasagne.layers.MaxPool2DLayer(l_conv_spn_1_b, pool_size=(2, 2))
+    l_dense_spn_1 = lasagne.layers.DenseLayer(
+            lasagne.layers.dropout(l_mp_spn_1, p=.5), num_units=128)
     b = np.zeros((2,3), dtype='float32')
     b[0, 0] = 1
     b[1, 1] = 1
     b = b.flatten()
     W = lasagne.init.Constant(0.0)
-    
-    l_hid2 = lasagne.layers.DenseLayer(
-            l_hid1, num_units=6, W=W, b=b)
-    l_spn = lasagne.layers.TransformerLayer(l_in_orig, l_hid2, downsample_factor=2)
-    l_hid3 = lasagne.layers.DenseLayer(
-	    l_spn, num_units=800)
+    l_dense_spn_out = lasagne.layers.DenseLayer(
+            l_dense_spn_1, num_units=6, W=W, b=b)
+    l_spn_1 = lasagne.layers.TransformerLayer(l_in_rescaled, l_dense_spn_out, downsample_factor=2)
+    l_conv_1_a = lasagne.layers.Conv2DLayer(
+            l_spn_1, num_filters=16, filter_size=(3, 3))
+    l_conv_1_b = lasagne.layers.Conv2DLayer(
+            l_conv_1_a, num_filters=32, filter_size=(3, 3))
+    l_mp_1 = lasagne.layers.MaxPool2DLayer(l_conv_1_b, pool_size=(2, 2))
+    l_dense_1 = lasagne.layers.DenseLayer(
+            lasagne.layers.dropout(l_mp_1, p=.5), num_units=128)
     l_out = lasagne.layers.DenseLayer(
-            l_hid3, num_units=10,
+            lasagne.layers.dropout(l_dense_1, p=.5),
+            num_units=10,
             nonlinearity=lasagne.nonlinearities.softmax)
-    #b = np.zeros((2,3), dtype='float32')
-    #b[0, 0] = 1
-    #b[1, 1] = 1
-    #b = b.flatten()
-    #W = lasagne.init.Constant(0.0)
-    #l_dense_spn_in = lasagne.layers.DenseLayer(l_dense_1, num_units=6, W=W, b=b)
-    #l_spn = lasagne.layers.TransformerLayer(l_in_rescaled, l_dense_spn_in, downsample_factor=2)
-    # Convolutional layer with 32 kernels of size 5x5. Strided and padded
-    # convolutions are supported as well; see the docstring.
-
     return l_out
 
 
@@ -241,7 +171,7 @@ def iterate_minibatches(inputs_orig, inputs_rescaled, targets, batchsize, shuffl
 # more functions to better separate the code, but it wouldn't make it any
 # easier to read.
 
-def main(model='cnn', num_epochs=500):
+def main(model='zoom_spn', num_epochs=500):
     # Load the dataset
     print("Loading data...")
     X_train_orig, X_train_rescaled, y_train, X_val_orig, X_val_rescaled, y_val, X_test_orig, X_test_rescaled, y_test = load_dataset()
@@ -253,14 +183,9 @@ def main(model='cnn', num_epochs=500):
 
     # Create neural network model (depending on first command line parameter)
     print("Building model and compiling functions...")
-    if model == 'mlp':
-        network = build_mlp(input_var_rescaled)
-    elif model.startswith('custom_mlp:'):
-        depth, width, drop_in, drop_hid = model.split(':', 1)[1].split(',')
-        network = build_custom_mlp(input_var_rescaled, int(depth), int(width),
-                                   float(drop_in), float(drop_hid))
-    elif model == 'cnn':
-        network = build_cnn(input_var_orig, input_var_rescaled)
+
+    if model == 'zoom_spn':
+        network = build_zoom_spn(input_var_orig, input_var_rescaled)
     else:
         print("Unrecognized model type %r." % model)
         return
