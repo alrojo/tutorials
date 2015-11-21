@@ -54,11 +54,10 @@ def load_dataset():
         np.random.seed(seed=23)
         spacing_2_a = np.random.randint(low=0, high=28, size=data.shape[0])
         spacing_2_b = spacing_2_a + data.shape[3]
-	for i in range(data.shape[0]):
-
-	    data_orig[i, :, spacing_1_a[i]:spacing_1_b[i], spacing_2_a[i]:spacing_2_b[i]] = data[i, :, :, :]
+        for i in range(data.shape[0]):
+            data_orig[i, :, spacing_1_a[i]:spacing_1_b[i], spacing_2_a[i]:spacing_2_b[i]] = data[i, :, :, :]
         data_orig = data_orig.astype('float32') / np.float32(256)
-        data_rescaled = data_orig#transform.rescale(data_orig, 0.5)
+        data_rescaled = transform.rescale(data, 0.5)
         # The inputs come as bytes, we convert them to float32 in range [0,1].
         # (Actually to range [0, 255/256], for compatibility to the version
         # provided at http://deeplearning.net/data/mnist/mnist.pkl.gz.)
