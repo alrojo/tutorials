@@ -1,0 +1,2 @@
+Add a weak connection (maybe heavily regulated by dropouts, or forced to have a low norm in weights and input) to every layer from every layer before that layer.
+This would force the gradient to flow back into the network.
