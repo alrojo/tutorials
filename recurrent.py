@@ -60,14 +60,14 @@ network with variable batch size and number of time steps.
 import numpy as np
 import theano
 import theano.tensor as T
-from .. import nonlinearities
-from .. import init
-from ..utils import unroll_scan
+from lasagne import nonlinearities
+from lasagne import init
+from lasagne.utils import unroll_scan
 
-from .base import MergeLayer, Layer
-from .input import InputLayer
-from .dense import DenseLayer
-from . import helper
+from lasagne.layers import MergeLayer, Layer
+from lasagne.layers import InputLayer
+from lasagne.layers import DenseLayer
+from lasagne.layers import helper
 
 __all__ = [
     "CustomRecurrentLayer",
