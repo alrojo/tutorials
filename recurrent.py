@@ -775,7 +775,7 @@ class LSTMLayer(MergeLayer):
     .. [1] Graves, Alex: "Generating sequences with recurrent neural networks."
            arXiv preprint arXiv:1308.0850 (2013).
     """
-    def __init__(self, incoming, num_units,
+    def __init__(self, incoming, num_units, input_to_hidden,
                  ingate=Gate(),
                  forgetgate=Gate(),
                  cell=Gate(W_cell=None, nonlinearity=nonlinearities.tanh),
@@ -822,8 +822,8 @@ class LSTMLayer(MergeLayer):
         else:
             self.nonlinearity = nonlinearity
 
+        self.input_to_hidden = input_to_hidden
         self.learn_init = learn_init
-        self.num_units = num_units
         self.backwards = backwards
         self.peepholes = peepholes
         self.gradient_steps = gradient_steps
@@ -898,6 +898,13 @@ class LSTMLayer(MergeLayer):
             self.hid_init = self.add_param(
                 hid_init, (1, self.num_units), name="hid_init",
                 trainable=learn_init, regularizable=False)
+
+    def get_params(self, **tags):
+        # Get all parameters from this layer, the master layer
+        params = super(LSTMLayer, self).get_params(**tags)
+        # Combine with all parameters from the child layers
+        params += helper.get_all_params(self.input_to_hidden, **tags)
+        return params
 
     def get_output_shape_for(self, input_shapes):
         # The shape of the input to this layer will be the first element
@@ -985,7 +992,24 @@ class LSTMLayer(MergeLayer):
             # precompute_input the inputs dot weight matrices before scanning.
             # W_in_stacked is (n_features, 4*num_units). input is then
             # (n_time_steps, n_batch, 4*num_units).
+
+            # Original
             input = T.dot(input, W_in_stacked) + b_stacked
+
+            # Added input_to_hidden
+            trailing_dims = tuple(input.shape[n] for n in range(2, input.ndim))
+            input = T.reshape(input, (seq_len*num_batch,) + trailing_dims)
+            input = helper.get_output(
+                self.input_to_hidden, input, **kwargs)
+
+            # Reshape back to (seq_len, batch_size, trailing dimensions...)
+            trailing_dims = tuple(input.shape[n] for n in range(1, input.ndim))
+            input = T.reshape(input, (seq_len, num_batch) + trailing_dims)
+
+        # When we are not precomputing the input, we also need to pass the
+        # input-to-hidden parameters to step
+        if not self.precompute_input:
+            non_seqs += helper.get_all_params(self.input_to_hidden)
 
         # At each call to scan, input_n will be (n_time_steps, 4*num_units).
         # We define a slicing function that extract the input to each LSTM gate
@@ -995,8 +1019,11 @@ class LSTMLayer(MergeLayer):
         # Create single recurrent computation step function
         # input_n is the n'th vector of the input
         def step(input_n, cell_previous, hid_previous, *args):
+
             if not self.precompute_input:
                 input_n = T.dot(input_n, W_in_stacked) + b_stacked
+                input_n = helper.get_output(
+                    self.input_to_hidden, input_n, **kwargs)
 
             # Calculate gates pre-activations and slice
             gates = input_n + T.dot(hid_previous, W_hid_stacked)
